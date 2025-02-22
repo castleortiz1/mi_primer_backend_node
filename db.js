@@ -1,3 +1,4 @@
+// db.js
 const mysql = require('mysql2');
 
 // Configura la conexión a la base de datos
