@@ -1,52 +1,73 @@
 const express = require('express');
-const morgan = require('morgan'); // Middleware externo para logging
-const cors = require('cors'); // Middleware externo para CORS
+const Usuario = require('./models/Usuario');
 const app = express();
 
-// Middlewares incorporados
-app.use(express.json()); // Parsea JSON
-app.use(express.urlencoded({ extended: true })); // Parsea URL-encoded
-app.use(express.static('public')); // Sirve archivos estáticos
+app.use(express.json());
 
-// Middleware externo para logging
-app.use(morgan('dev'));
-
-// Middleware externo para CORS
-app.use(cors());
-
-// Middleware personalizado para registrar solicitudes
-app.use((req, res, next) => {
-  console.log(`Solicitud recibida: ${req.method} ${req.url}`);
-  next();
-});
-
-// Rutas
-app.get('/', (req, res) => {
-  res.send('¡Hola, mundo! Este es mi primer servidor backend.');
-});
-
-app.get('/about', (req, res) => {
-  res.send('Esta es la página "Acerca de".');
-});
-
-// Ruta para contact
-app.get('/contact', (req, res) => {
-    res.send('Puedes contactarnos en contacto@example.com.');
+// Crear un nuevo usuario
+app.post('/usuarios', (req, res) => {
+  const { nombre, edad, email } = req.body;
+  Usuario.crear(nombre, edad, email, (err, results) => {
+    if (err) {
+      res.status(500).json({ error: 'Error al crear el usuario' });
+    } else {
+      res.status(201).json({ id: results.insertId, nombre, edad, email });
+    }
   });
-
-app.post('/submit', (req, res) => {
-  const data = req.body;
-  res.json({ message: 'Datos recibidos', data });
 });
 
-// Manejo de errores
-app.use((req, res, next) => {
-  res.status(404).send('Lo siento, esta página no existe.');
+// Obtener todos los usuarios
+app.get('/usuarios', (req, res) => {
+  Usuario.obtenerTodos((err, results) => {
+    if (err) {
+      res.status(500).json({ error: 'Error al obtener los usuarios' });
+    } else {
+      res.status(200).json(results);
+    }
+  });
 });
 
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).send('¡Algo salió mal!');
+// Obtener un usuario por ID
+app.get('/usuarios/:id', (req, res) => {
+  const { id } = req.params;
+  Usuario.obtenerPorId(id, (err, results) => {
+    if (err) {
+      res.status(500).json({ error: 'Error al obtener el usuario' });
+    } else if (results.length === 0) {
+      res.status(404).json({ error: 'Usuario no encontrado' });
+    } else {
+      res.status(200).json(results[0]);
+    }
+  });
+});
+
+// Actualizar un usuario
+app.put('/usuarios/:id', (req, res) => {
+  const { id } = req.params;
+  const { nombre, edad, email } = req.body;
+  Usuario.actualizar(id, nombre, edad, email, (err, results) => {
+    if (err) {
+      res.status(500).json({ error: 'Error al actualizar el usuario' });
+    } else if (results.affectedRows === 0) {
+      res.status(404).json({ error: 'Usuario no encontrado' });
+    } else {
+      res.status(200).json({ id, nombre, edad, email });
+    }
+  });
+});
+
+// Eliminar un usuario
+app.delete('/usuarios/:id', (req, res) => {
+  const { id } = req.params;
+  Usuario.eliminar(id, (err, results) => {
+    if (err) {
+      res.status(500).json({ error: 'Error al eliminar el usuario' });
+    } else if (results.affectedRows === 0) {
+      res.status(404).json({ error: 'Usuario no encontrado' });
+    } else {
+      res.status(204).send();
+    }
+  });
 });
 
 // Iniciar el servidor
